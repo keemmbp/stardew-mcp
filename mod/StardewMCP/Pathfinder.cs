@@ -21,8 +21,11 @@ public class Pathfinder
         if (location == null)
             return null;
 
+        // Pre-cache blocked tiles for this pathfinding request
+        var blockedTiles = GetBlockedTiles(location);
+
         // Quick check: if goal is not passable, no path possible
-        if (!IsTileWalkable(location, (int)goal.X, (int)goal.Y))
+        if (!IsTileWalkable(location, (int)goal.X, (int)goal.Y, blockedTiles))
             return null;
 
         // If already at goal, return empty path
@@ -57,7 +60,7 @@ public class Pathfinder
                 int ny = (int)neighbor.Y;
 
                 // Skip if not walkable
-                if (!IsTileWalkable(location, nx, ny))
+                if (!IsTileWalkable(location, nx, ny, blockedTiles))
                     continue;
 
                 float tentativeGScore = gScore[current] + 1; // Cost of 1 per tile
@@ -81,8 +84,73 @@ public class Pathfinder
         return null;
     }
 
+    /// <summary>Get a set of tiles occupied by large features (resource clumps, buildings, furniture).</summary>
+    private HashSet<Vector2> GetBlockedTiles(GameLocation location)
+    {
+        var blocked = new HashSet<Vector2>();
+
+        // Cache resource clumps
+        foreach (var clump in location.resourceClumps)
+        {
+            for (int dx = 0; dx < clump.width.Value; dx++)
+            {
+                for (int dy = 0; dy < clump.height.Value; dy++)
+                {
+                    int tx = (int)clump.Tile.X + dx;
+                    int ty = (int)clump.Tile.Y + dy;
+                    if (clump.occupiesTile(tx, ty))
+                        blocked.Add(new Vector2(tx, ty));
+                }
+            }
+        }
+
+        // Cache buildings
+        if (location is Farm farm)
+        {
+            foreach (var building in farm.buildings)
+            {
+                for (int dx = 0; dx < building.tilesWide.Value; dx++)
+                {
+                    for (int dy = 0; dy < building.tilesHigh.Value; dy++)
+                    {
+                        int tx = building.tileX.Value + dx;
+                        int ty = building.tileY.Value + dy;
+                        var tileVector = new Vector2(tx, ty);
+                        if (building.occupiesTile(tileVector))
+                            blocked.Add(tileVector);
+                    }
+                }
+            }
+        }
+
+        // Cache furniture
+        foreach (var furniture in location.furniture)
+        {
+            // Furniture can be rotated and have complex bounding boxes
+            var bbox = furniture.boundingBox.Value;
+            int minX = bbox.X / 64;
+            int maxX = (bbox.X + bbox.Width) / 64;
+            int minY = bbox.Y / 64;
+            int maxY = (bbox.Y + bbox.Height) / 64;
+
+            for (int tx = minX; tx <= maxX; tx++)
+            {
+                for (int ty = minY; ty <= maxY; ty++)
+                {
+                    if (furniture.TileLocation == new Vector2(tx, ty) ||
+                        furniture.boundingBox.Value.Contains(tx * 64 + 32, ty * 64 + 32))
+                    {
+                        blocked.Add(new Vector2(tx, ty));
+                    }
+                }
+            }
+        }
+
+        return blocked;
+    }
+
     /// <summary>Check if a tile is walkable for the player.</summary>
-    private bool IsTileWalkable(GameLocation location, int x, int y)
+    private bool IsTileWalkable(GameLocation location, int x, int y, HashSet<Vector2> blockedTiles)
     {
         // Check map bounds
         if (x < 0 || y < 0)
@@ -120,30 +188,9 @@ public class Pathfinder
                 return false;
         }
 
-        // Check for large terrain features (like resource clumps)
-        foreach (var clump in location.resourceClumps)
-        {
-            if (clump.occupiesTile(x, y))
-                return false;
-        }
-
-        // Check for buildings (on farm locations)
-        if (location is Farm farm)
-        {
-            foreach (var building in farm.buildings)
-            {
-                if (building.occupiesTile(tileVector))
-                    return false;
-            }
-        }
-
-        // Check for furniture
-        foreach (var furniture in location.furniture)
-        {
-            if (furniture.TileLocation == tileVector ||
-                furniture.boundingBox.Value.Contains(x * 64 + 32, y * 64 + 32))
-                return false;
-        }
+        // Check pre-cached blocked tiles (resource clumps, buildings, furniture)
+        if (blockedTiles.Contains(tileVector))
+            return false;
 
         // Check water tiles (player can't walk on water)
         if (location.isWaterTile(x, y) && !location.isTilePassable(tileLocation, Game1.viewport))
