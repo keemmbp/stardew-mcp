@@ -1,6 +1,6 @@
 # Stardew Valley MCP Bridge
 
-A hybrid AI-controlled game mod that bridges Stardew Valley with AI assistants via the Model Context Protocol (MCP). Enables autonomous AI agents to control and play Stardew Valley through real-time game state synchronization.
+A game mod that bridges Stardew Valley with AI assistants via the official Model Context Protocol (MCP). Enables standard MCP clients (like Claude Desktop) to connect directly to Stardew Valley and autonomously control the game through real-time game state synchronization.
 
 ## Architecture
 
@@ -16,11 +16,11 @@ A hybrid AI-controlled game mod that bridges Stardew Valley with AI assistants v
 ┌─────────────────────────────────────────────────────────┐
 │ MCP Server (Go)                                         │
 │   GameClient: WebSocket connection, state tracking      │
-│   StardewAgent: 12 tools + 30 cheats, autonomous loop   │
+│   MCPServer: Provides tools via stdio transport         │
 └─────────────────────────────────────────────────────────┘
-              ↕ Copilot SDK
+              ↕ stdio (JSON-RPC)
 ┌─────────────────────────────────────────────────────────┐
-│ Claude Sonnet (via GitHub Copilot SDK)                  │
+│ Any MCP Client (e.g. Claude Desktop App)                │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -32,8 +32,7 @@ A hybrid AI-controlled game mod that bridges Stardew Valley with AI assistants v
 - .NET 6.0 SDK
 
 ### For the MCP Server
-- Go 1.23+
-- GitHub Copilot access (for Claude Sonnet via Copilot SDK)
+- Go 1.25+
 
 ## Building
 
@@ -85,17 +84,22 @@ Launch the game through SMAPI. The mod will automatically start a WebSocket serv
 
 The mod activates once you load into a game save.
 
-### 3. Run the MCP Server
+### 3. Run the MCP Server via Claude Desktop
 
-```bash
-cd mcp-server
-./stardew-mcp                    # Run with default autonomous mode
-./stardew-mcp -auto=false        # Connect without starting AI agent
-./stardew-mcp -goal "Clear the farm and plant parsnips"
-./stardew-mcp -url ws://localhost:8765/game  # Custom WebSocket URL
+You can connect the built Go binary to Claude Desktop or any other standard MCP Client. To configure Claude Desktop, add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "stardew-valley": {
+      "command": "/absolute/path/to/mcp-server/stardew-mcp",
+      "args": ["-url", "ws://localhost:8765/game"]
+    }
+  }
+}
 ```
 
-The server connects to the game via WebSocket and begins the autonomous AI agent loop.
+The server connects to the game via WebSocket, then opens stdio channels for Claude to read the game state, execute tools, and retrieve the knowledge prompt.
 
 ## Available AI Tools
 
