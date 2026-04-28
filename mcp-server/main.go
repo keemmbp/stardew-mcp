@@ -509,6 +509,7 @@ func (c *GameClient) SendCommand(action string, params map[string]interface{}) (
 
 func main() {
 	urlFlag := flag.String("url", "ws://localhost:8765/game", "WebSocket URL for the game mod")
+	enableCheatsFlag := flag.Bool("enable-cheats", false, "Register cheat tools. The StardewMCP mod must also have EnableCheats=true.")
 	flag.Parse()
 
 	gameClient = NewGameClient()
@@ -525,8 +526,8 @@ func main() {
 		}
 	}()
 
-	log.Println("Starting MCP server...")
-	if err := runMCPServer(gameClient); err != nil {
+	log.Printf("Starting MCP server (cheat tools enabled: %t)...", *enableCheatsFlag)
+	if err := runMCPServer(gameClient, *enableCheatsFlag); err != nil {
 		log.Fatalf("Failed to run MCP server: %v", err)
 	}
 }
