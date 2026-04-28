@@ -551,13 +551,13 @@ public class CommandExecutor
                 "cheat_plant_seeds" => ExecuteCheatPlantSeeds(command),
                 "cheat_fertilize_all" => ExecuteCheatFertilizeAll(command),
                 "cheat_set_season" => ExecuteCheatSetSeason(command),
-                
+
                 // Inventory & upgrade cheats
                 "cheat_upgrade_backpack" => ExecuteCheatUpgradeBackpack(command),
                 "cheat_upgrade_tool" => ExecuteCheatUpgradeTool(command),
                 "cheat_upgrade_all_tools" => ExecuteCheatUpgradeAllTools(command),
                 "cheat_unlock_all" => ExecuteCheatUnlockAll(command),
-                
+
                 // Targeted/selective cheats (for precise control like drawing shapes)
                 "cheat_hoe_tiles" => ExecuteCheatHoeTiles(command),
                 "cheat_clear_tiles" => ExecuteCheatClearTiles(command),
@@ -2493,7 +2493,7 @@ public class CommandExecutor
         {
             Id = command.Id,
             Success = true,
-            Message = $"Harvested {harvestedCount} crops in {location.Name}" + 
+            Message = $"Harvested {harvestedCount} crops in {location.Name}" +
                       (notReadyCount > 0 ? $" ({notReadyCount} not ready)" : "") +
                       (deadCount > 0 ? $" ({deadCount} dead)" : ""),
             Data = new Dictionary<string, object>
@@ -2552,14 +2552,14 @@ public class CommandExecutor
             if (pair.Value is HoeDirt hoeDirt && hoeDirt.crop != null)
             {
                 var crop = hoeDirt.crop;
-                
+
                 // Revive dead crops first
                 if (crop.dead.Value)
                 {
                     crop.dead.Value = false;
                     deadCount++;
                 }
-                
+
                 // Check if crop has growth phases
                 if (crop.phaseDays.Count > 0)
                 {
@@ -2811,7 +2811,7 @@ public class CommandExecutor
         }
 
         var npcName = GetStringParam(npcNameObj);
-        
+
         // Support both "points" (raw) and "hearts" (converted)
         int points;
         if (command.Params.TryGetValue("hearts", out var heartsObj))
@@ -2900,9 +2900,9 @@ public class CommandExecutor
         var player = Game1.player;
         var updatedCount = 0;
         var maxPoints = 2500; // 10 hearts by default
-        
+
         // Check for 14 hearts (dating/spouse max)
-        if (command.Params.TryGetValue("includeRomance", out var romanceObj) && 
+        if (command.Params.TryGetValue("includeRomance", out var romanceObj) &&
             GetStringParam(romanceObj).ToLower() == "true")
         {
             maxPoints = 3500; // 14 hearts for romanceable NPCs
@@ -3026,7 +3026,7 @@ public class CommandExecutor
         if (!_cheatModeEnabled) return CheatModeDisabledResponse(command);
 
         var location = Game1.currentLocation;
-        
+
         if (location is not MineShaft mine)
         {
             return new CommandResponse
@@ -3046,7 +3046,7 @@ public class CommandExecutor
         {
             var obj = pair.Value;
             var name = obj.Name?.ToLower() ?? "";
-            
+
             // Check if it's a stone/ore node
             if (obj.Name == "Stone" || name.Contains("ore") || name.Contains("node") ||
                 obj.QualifiedItemId.StartsWith("(O)75") || // Various ores
@@ -3062,7 +3062,7 @@ public class CommandExecutor
                 obj.QualifiedItemId == "(O)95")    // Radioactive node
             {
                 objectsToRemove.Add(pair.Key);
-                
+
                 // Determine what ore/gems to give based on node type
                 var drops = GetMineDrops(obj, mine.mineLevel);
                 foreach (var drop in drops)
@@ -3132,7 +3132,7 @@ public class CommandExecutor
     {
         var drops = new List<(string itemId, int count)>();
         var random = new Random();
-        
+
         // Determine drops based on mine level and node type
         if (mineLevel <= 40)
         {
@@ -3157,10 +3157,10 @@ public class CommandExecutor
                 drops.Add(("(O)384", random.Next(1, 4))); // Gold Ore
             if (random.NextDouble() < 0.05) drops.Add(("(O)749", 1)); // Omni Geode
         }
-        
+
         // Always some stone
         drops.Add(("(O)390", random.Next(1, 3))); // Stone
-        
+
         // Chance for coal
         if (random.NextDouble() < 0.05)
             drops.Add(("(O)382", 1)); // Coal
@@ -3214,7 +3214,7 @@ public class CommandExecutor
         }
 
         var time = GetIntParam(timeObj);
-        
+
         // Validate time format (600-2600)
         if (time < 600 || time > 2600)
         {
@@ -3255,7 +3255,7 @@ public class CommandExecutor
         if (!_cheatModeEnabled) return CheatModeDisabledResponse(command);
 
         _timeFreezeEnabled = !_timeFreezeEnabled;
-        
+
         if (_timeFreezeEnabled)
         {
             _frozenTime = Game1.timeOfDay;
@@ -3265,7 +3265,7 @@ public class CommandExecutor
         {
             Id = command.Id,
             Success = true,
-            Message = _timeFreezeEnabled 
+            Message = _timeFreezeEnabled
                 ? $"Time FROZEN at {Game1.timeOfDay}. Use cheat_time_freeze again to unfreeze."
                 : "Time UNFROZEN. Time will now pass normally.",
             Data = new Dictionary<string, object>
@@ -3291,7 +3291,7 @@ public class CommandExecutor
         {
             Id = command.Id,
             Success = true,
-            Message = _infiniteEnergyEnabled 
+            Message = _infiniteEnergyEnabled
                 ? "Infinite energy ENABLED. Stamina will stay at max."
                 : "Infinite energy DISABLED. Stamina will drain normally.",
             Data = new Dictionary<string, object>
@@ -3398,7 +3398,7 @@ public class CommandExecutor
         {
             Id = command.Id,
             Success = true,
-            Message = $"Petted {pettedCount} animals: {string.Join(", ", animalNames.Take(10))}" + 
+            Message = $"Petted {pettedCount} animals: {string.Join(", ", animalNames.Take(10))}" +
                      (animalNames.Count > 10 ? $" and {animalNames.Count - 10} more" : ""),
             Data = new Dictionary<string, object>
             {
@@ -3413,7 +3413,7 @@ public class CommandExecutor
         if (!_cheatModeEnabled) return CheatModeDisabledResponse(command);
 
         var questLog = Game1.player.questLog;
-        
+
         if (questLog.Count == 0)
         {
             return new CommandResponse
@@ -3426,11 +3426,11 @@ public class CommandExecutor
 
         // Complete specific quest by ID or name, or all quests
         var completedQuests = new List<string>();
-        
+
         if (command.Params.TryGetValue("questId", out var questIdObj))
         {
             var questId = GetStringParam(questIdObj);
-            var quest = questLog.FirstOrDefault(q => q.id.Value == questId || 
+            var quest = questLog.FirstOrDefault(q => q.id.Value == questId ||
                                                       q.GetName().ToLower().Contains(questId.ToLower()));
             if (quest != null)
             {
@@ -3494,7 +3494,7 @@ public class CommandExecutor
         {
             targetNpc = location.getCharacterFromName(npcName);
             if (targetNpc != null) break;
-            
+
             // Also check buildings
             foreach (var building in location.buildings)
             {
@@ -3553,7 +3553,7 @@ public class CommandExecutor
             0 => "LOVE",
             2 => "Like",
             4 => "Neutral",
-            6 => "Dislike", 
+            6 => "Dislike",
             8 => "HATE",
             _ => "Unknown"
         };
@@ -3635,7 +3635,7 @@ public class CommandExecutor
 
                 // Check if tile is tillable (has Diggable property OR is on Farm and looks like farmable ground)
                 bool isTillable = location.doesTileHaveProperty(x, y, "Diggable", "Back") != null;
-                
+
                 // On Farm, also check if the tile is passable ground (more permissive)
                 if (!isTillable && location is Farm)
                 {
@@ -4007,7 +4007,7 @@ public class CommandExecutor
         foreach (var pair in location.Objects.Pairs.ToList())
         {
             var obj = pair.Value;
-            
+
             // Artifact spots have QualifiedItemId "(O)590"
             if (obj.QualifiedItemId == "(O)590" || obj.Name == "Artifact Spot")
             {
@@ -4036,7 +4036,7 @@ public class CommandExecutor
             location.Objects.Remove(pos);
         }
 
-        var collectedSummary = collectedItems.Count > 0 
+        var collectedSummary = collectedItems.Count > 0
             ? string.Join(", ", collectedItems.Select(kv => $"{kv.Value}x {kv.Key}"))
             : "nothing";
 
@@ -4057,7 +4057,7 @@ public class CommandExecutor
     private List<(string itemId, int count)> GetArtifactDrops(GameLocation location, Random random)
     {
         var drops = new List<(string itemId, int count)>();
-        
+
         // Common artifacts and items from digging
         var commonArtifacts = new[]
         {
@@ -4155,7 +4155,7 @@ public class CommandExecutor
         var location = Game1.currentLocation;
         var plantedCount = 0;
         var skippedCount = 0;
-        
+
         // Strip (O) prefix if present - Crop constructor may need just the ID
         string cropSeedId = seedId;
         if (seedId.StartsWith("(O)"))
@@ -4183,7 +4183,7 @@ public class CommandExecutor
                     // Create crop - the constructor validates season internally
                     // Try with the stripped ID first (numeric), fall back to full ID
                     var crop = new Crop(cropSeedId, (int)pair.Key.X, (int)pair.Key.Y, location);
-                    
+
                     // Check if crop was created successfully (has growth phases)
                     if (crop.phaseDays == null || crop.phaseDays.Count == 0)
                     {
@@ -4332,7 +4332,7 @@ public class CommandExecutor
 
         var player = Game1.player;
         var currentSize = player.MaxItems;
-        
+
         // Backpack sizes: 12 (starter), 24 (large), 36 (deluxe)
         int newSize = 36; // Default to max
         if (command.Params.TryGetValue("size", out var sizeObj))
@@ -4350,7 +4350,7 @@ public class CommandExecutor
         }
 
         player.MaxItems = newSize;
-        
+
         // Expand inventory if needed
         while (player.Items.Count < newSize)
         {
@@ -4360,7 +4360,7 @@ public class CommandExecutor
         string sizeName = newSize switch
         {
             12 => "Starter Backpack",
-            24 => "Large Backpack", 
+            24 => "Large Backpack",
             36 => "Deluxe Backpack",
             _ => $"{newSize}-slot Backpack"
         };
@@ -4411,7 +4411,7 @@ public class CommandExecutor
 
         var player = Game1.player;
         Tool? tool = null;
-        
+
         // Find the tool in player's inventory
         foreach (var item in player.Items)
         {
@@ -4423,7 +4423,7 @@ public class CommandExecutor
         }
 
         // Handle Trash Can separately (it's not in inventory)
-        if (toolName.Equals("Trash", StringComparison.OrdinalIgnoreCase) || 
+        if (toolName.Equals("Trash", StringComparison.OrdinalIgnoreCase) ||
             toolName.Equals("Trash Can", StringComparison.OrdinalIgnoreCase) ||
             toolName.Equals("TrashCan", StringComparison.OrdinalIgnoreCase))
         {
@@ -4502,7 +4502,7 @@ public class CommandExecutor
             {
                 // Skip tools that can't be upgraded (like Scythe)
                 if (tool is MeleeWeapon) continue;
-                
+
                 tool.UpgradeLevel = upgradeLevel;
                 upgradedTools.Add(tool.Name);
             }
@@ -4674,7 +4674,7 @@ public class CommandExecutor
         {
             Id = command.Id,
             Success = hoedCount > 0,
-            Message = $"Hoed {hoedCount}/{tiles.Count} tiles in {location.Name}" + 
+            Message = $"Hoed {hoedCount}/{tiles.Count} tiles in {location.Name}" +
                      (failedCount > 0 ? $" (failed: {string.Join(", ", failedReasons.Select(kv => $"{kv.Key}={kv.Value}"))})" : ""),
             Data = new Dictionary<string, object>
             {
@@ -5068,10 +5068,10 @@ public class CommandExecutor
     private List<Vector2> ParseAsciiGridPattern(string grid, int centerX, int centerY)
     {
         var tiles = new List<Vector2>();
-        
+
         // Split into lines, handle both \n and actual newlines
         var lines = grid.Replace("\\n", "\n").Split('\n', StringSplitOptions.None);
-        
+
         // Find dimensions to center the pattern
         int height = lines.Length;
         int width = lines.Max(l => l.Length);
@@ -5132,13 +5132,13 @@ public class CommandExecutor
     private List<Vector2> ParseOffsetString(string offsetStr, int centerX, int centerY)
     {
         var tiles = new List<Vector2>();
-        
+
         var pairs = offsetStr.Split(';', StringSplitOptions.RemoveEmptyEntries);
         foreach (var pair in pairs)
         {
             var coords = pair.Split(',');
-            if (coords.Length >= 2 && 
-                int.TryParse(coords[0].Trim(), out var dx) && 
+            if (coords.Length >= 2 &&
+                int.TryParse(coords[0].Trim(), out var dx) &&
                 int.TryParse(coords[1].Trim(), out var dy))
             {
                 tiles.Add(new Vector2(centerX + dx, centerY + dy));
@@ -5168,7 +5168,7 @@ public class CommandExecutor
                 }
                 return tiles;
             }
-            
+
             tiles.Add(new Vector2(GetIntParam(xObj), GetIntParam(yObj)));
             return tiles;
         }
@@ -5314,11 +5314,11 @@ public class CommandExecutor
     private List<Vector2> GenerateHeartPattern(int cx, int cy, int size)
     {
         var tiles = new List<Vector2>();
-        
+
         // Pixel-art heart templates at different sizes
         // These are hand-crafted to look good as hoed tiles
         // Format: # = tile, . = empty, centered at (0,0)
-        
+
         string[] heartSmall = {
             // 7x6 heart (size <= 4)
             ".##.##.",
@@ -5328,7 +5328,7 @@ public class CommandExecutor
             "..###..",
             "...#...",
         };
-        
+
         string[] heartMedium = {
             // 9x8 heart (size 5-7)
             ".##...##.",
@@ -5340,7 +5340,7 @@ public class CommandExecutor
             "...###...",
             "....#....",
         };
-        
+
         string[] heartLarge = {
             // 11x10 heart (size 8-10)
             "..##...##..",
@@ -5354,7 +5354,7 @@ public class CommandExecutor
             "....###....",
             ".....#.....",
         };
-        
+
         string[] heartXLarge = {
             // 13x12 heart (size > 10)
             "..###...###..",
@@ -5370,7 +5370,7 @@ public class CommandExecutor
             ".....###.....",
             "......#......",
         };
-        
+
         // Select template based on size
         string[] template;
         if (size <= 4)
@@ -5381,14 +5381,14 @@ public class CommandExecutor
             template = heartLarge;
         else
             template = heartXLarge;
-        
+
         int height = template.Length;
         int width = template[0].Length;
-        
+
         // Calculate offset to center the pattern
         int offsetX = width / 2;
         int offsetY = height / 2;
-        
+
         // Convert template to tile positions
         for (int row = 0; row < height; row++)
         {
@@ -5416,7 +5416,7 @@ public class CommandExecutor
         {
             int x = cx + (int)Math.Round(radius * Math.Cos(angle));
             int y = cy + (int)Math.Round(radius * Math.Sin(angle));
-            
+
             if (!addedTiles.Contains((x, y)))
             {
                 tiles.Add(new Vector2(x, y));
@@ -5636,19 +5636,23 @@ public class CommandExecutor
 
         switch (direction)
         {
-            case "up": case "north":
+            case "up":
+            case "north":
                 headY = cy - size + 1;
                 perpX = 1; perpY = 1;
                 break;
-            case "down": case "south":
+            case "down":
+            case "south":
                 headY = cy + size - 1;
                 perpX = 1; perpY = -1;
                 break;
-            case "left": case "west":
+            case "left":
+            case "west":
                 headX = cx - size + 1;
                 perpX = 1; perpY = 1;
                 break;
-            case "right": case "east":
+            case "right":
+            case "east":
                 headX = cx + size - 1;
                 perpX = -1; perpY = 1;
                 break;

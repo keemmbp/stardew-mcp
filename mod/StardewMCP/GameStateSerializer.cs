@@ -247,6 +247,68 @@ public class GameStateSerializer
         int mapSize = ScanRadius * 2 + 1; // 61x61 grid
         var grid = new char[mapSize, mapSize];
 
+        // Pre-compute collision structures to optimize the per-tile checks
+        var clumpTiles = new HashSet<Vector2>();
+        var buildingTiles = new Dictionary<Vector2, char>();
+        var furnitureTiles = new HashSet<Vector2>();
+
+        try
+        {
+            // Cache resource clumps
+            foreach (var clump in location.resourceClumps.ToList())
+            {
+                for (int dx = 0; dx < clump.width.Value; dx++)
+                {
+                    for (int dy = 0; dy < clump.height.Value; dy++)
+                    {
+                        clumpTiles.Add(new Vector2((int)clump.Tile.X + dx, (int)clump.Tile.Y + dy));
+                    }
+                }
+            }
+
+            // Cache buildings
+            foreach (var building in location.buildings.ToList())
+            {
+                for (int dx = 0; dx < building.tilesWide.Value; dx++)
+                {
+                    for (int dy = 0; dy < building.tilesHigh.Value; dy++)
+                    {
+                        int bx = building.tileX.Value + dx;
+                        int by = building.tileY.Value + dy;
+                        buildingTiles[new Vector2(bx, by)] = '#';
+                    }
+                }
+
+                // Add the door explicitly to override the '#'
+                int doorX = building.tileX.Value + building.humanDoor.X;
+                int doorY = building.tileY.Value + building.humanDoor.Y;
+                buildingTiles[new Vector2(doorX, doorY)] = '>';
+            }
+
+            // Cache furniture
+            foreach (var furn in location.furniture.ToList())
+            {
+                var bbox = furn.boundingBox.Value;
+                int minX = bbox.X / 64;
+                int maxX = (bbox.X + bbox.Width) / 64;
+                int minY = bbox.Y / 64;
+                int maxY = (bbox.Y + bbox.Height) / 64;
+
+                for (int tx = minX; tx <= maxX; tx++)
+                {
+                    for (int ty = minY; ty <= maxY; ty++)
+                    {
+                        if (furn.TileLocation == new Vector2(tx, ty) ||
+                            furn.boundingBox.Value.Contains(tx * 64 + 32, ty * 64 + 32))
+                        {
+                            furnitureTiles.Add(new Vector2(tx, ty));
+                        }
+                    }
+                }
+            }
+        }
+        catch { /* Ignore concurrent modification errors during cache generation */ }
+
         // Initialize with ground
         for (int y = 0; y < mapSize; y++)
             for (int x = 0; x < mapSize; x++)
@@ -317,37 +379,21 @@ public class GameStateSerializer
                 }
 
                 // Check resource clumps (large stumps, boulders, meteorites)
-                foreach (var clump in location.resourceClumps)
+                if (clumpTiles.Contains(tileVector))
                 {
-                    if (clump.occupiesTile(worldX, worldY))
-                    {
-                        tileChar = 'O';
-                        break;
-                    }
+                    tileChar = 'O';
                 }
 
                 // Check buildings
-                foreach (var building in location.buildings)
+                if (buildingTiles.TryGetValue(tileVector, out char buildingChar))
                 {
-                    if (building.occupiesTile(tileVector))
-                    {
-                        // Check if this is the door tile
-                        int doorX = building.tileX.Value + building.humanDoor.X;
-                        int doorY = building.tileY.Value + building.humanDoor.Y;
-                        tileChar = (worldX == doorX && worldY == doorY) ? '>' : '#';
-                        break;
-                    }
+                    tileChar = buildingChar;
                 }
 
                 // Check furniture
-                foreach (var furn in location.furniture)
+                if (furnitureTiles.Contains(tileVector))
                 {
-                    if (furn.TileLocation == tileVector ||
-                        furn.boundingBox.Value.Contains(worldX * 64 + 32, worldY * 64 + 32))
-                    {
-                        tileChar = '#';
-                        break;
-                    }
+                    tileChar = '#';
                 }
 
                 grid[gridY, gridX] = tileChar;
