@@ -16,11 +16,11 @@ A hybrid AI-controlled game mod that bridges Stardew Valley with AI assistants v
 ┌─────────────────────────────────────────────────────────┐
 │ MCP Server (Go)                                         │
 │   GameClient: WebSocket connection, state tracking      │
-│   StardewAgent: 12 tools + 30 cheats, autonomous loop   │
+│   MCP Server: Exposes tools and resources via stdio     │
 └─────────────────────────────────────────────────────────┘
-              ↕ Copilot SDK
+              ↕ stdio (MCP Protocol)
 ┌─────────────────────────────────────────────────────────┐
-│ Claude Sonnet (via GitHub Copilot SDK)                  │
+│ MCP Client (e.g., Claude Desktop)                       │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -33,7 +33,7 @@ A hybrid AI-controlled game mod that bridges Stardew Valley with AI assistants v
 
 ### For the MCP Server
 - Go 1.23+
-- GitHub Copilot access (for Claude Sonnet via Copilot SDK)
+- An MCP Client (e.g., [Claude Desktop](https://claude.ai/download))
 
 ## Building
 
@@ -85,17 +85,34 @@ Launch the game through SMAPI. The mod will automatically start a WebSocket serv
 
 The mod activates once you load into a game save.
 
-### 3. Run the MCP Server
+### 3. Configure the MCP Client
 
-```bash
-cd mcp-server
-./stardew-mcp                    # Run with default autonomous mode
-./stardew-mcp -auto=false        # Connect without starting AI agent
-./stardew-mcp -goal "Clear the farm and plant parsnips"
-./stardew-mcp -url ws://localhost:8765/game  # Custom WebSocket URL
+Add the MCP server to your client configuration (e.g., `claude_desktop_config.json` for Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "stardew-mcp": {
+      "command": "/absolute/path/to/stardew-mcp",
+      "args": []
+    }
+  }
+}
 ```
 
-The server connects to the game via WebSocket and begins the autonomous AI agent loop.
+If your mod uses a custom WebSocket URL, you can pass it as an argument:
+```json
+{
+  "mcpServers": {
+    "stardew-mcp": {
+      "command": "/absolute/path/to/stardew-mcp",
+      "args": ["-url", "ws://localhost:8765/game"]
+    }
+  }
+}
+```
+
+The server connects to the game via WebSocket and exposes the Stardew Valley tools to your AI assistant.
 
 ## Available AI Tools
 
