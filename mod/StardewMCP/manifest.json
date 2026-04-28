@@ -1,9 +1,9 @@
 {
   "Name": "Stardew MCP Bridge",
-  "Author": "Your Name",
+  "Author": "xetarussell",
   "Version": "1.0.0",
   "Description": "Allows AI to control Stardew Valley via MCP protocol",
-  "UniqueID": "YourName.StardewMCP",
+  "UniqueID": "xetarussell.StardewMCP",
   "EntryDll": "StardewMCP.dll",
   "MinimumApiVersion": "4.0.0",
   "UpdateKeys": []

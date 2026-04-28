@@ -10,15 +10,22 @@ public class ModEntry : Mod
     private WebSocketServer? _wsServer;
     private GameStateSerializer? _stateSerializer;
     private CommandExecutor? _commandExecutor;
+    private ModConfig _config = new();
+    private int _stateBroadcastSecondsElapsed;
 
     /// <summary>The mod entry point.</summary>
     public override void Entry(IModHelper helper)
     {
         Monitor.Log("Stardew MCP Bridge loading...", LogLevel.Info);
+        _config = helper.ReadConfig<ModConfig>();
+        if (_config.WebSocketPort <= 0)
+            _config.WebSocketPort = 8765;
+        if (_config.StateBroadcastIntervalSeconds <= 0)
+            _config.StateBroadcastIntervalSeconds = 1;
 
         // Initialize components
         _stateSerializer = new GameStateSerializer();
-        _commandExecutor = new CommandExecutor(helper, Monitor);
+        _commandExecutor = new CommandExecutor(Monitor, _config);
         _stateSerializer.SetCommandExecutor(_commandExecutor); // Wire up for movement state
         _wsServer = new WebSocketServer(Monitor, _stateSerializer, _commandExecutor);
 
@@ -34,8 +41,10 @@ public class ModEntry : Mod
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
     {
-        Monitor.Log("Game launched, starting WebSocket server on port 8765...", LogLevel.Info);
-        _wsServer?.Start(8765);
+        Monitor.Log($"Game launched, starting WebSocket server on port {_config.WebSocketPort}...", LogLevel.Info);
+        _wsServer?.Start(_config.WebSocketPort);
+        if (!_config.EnableCheats)
+            Monitor.Log("Cheat commands are disabled. Set EnableCheats=true in the StardewMCP config to allow them.", LogLevel.Info);
     }
 
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
@@ -58,6 +67,11 @@ public class ModEntry : Mod
         // Only broadcast state when game is running
         if (!Context.IsWorldReady)
             return;
+
+        _stateBroadcastSecondsElapsed++;
+        if (_stateBroadcastSecondsElapsed < _config.StateBroadcastIntervalSeconds)
+            return;
+        _stateBroadcastSecondsElapsed = 0;
 
         // Broadcast game state to connected clients
         _wsServer?.BroadcastState();

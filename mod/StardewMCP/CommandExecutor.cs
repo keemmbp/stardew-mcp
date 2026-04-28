@@ -19,8 +19,9 @@ namespace StardewMCP;
 /// <summary>Executes commands received from the WebSocket server.</summary>
 public class CommandExecutor
 {
-    private readonly IModHelper _helper;
     private readonly IMonitor _monitor;
+    private readonly ModConfig _config;
+    private readonly GameActionDriver _actions;
     private readonly ConcurrentQueue<GameCommand> _commandQueue = new();
     private readonly Pathfinder _pathfinder = new();
 
@@ -57,10 +58,11 @@ public class CommandExecutor
     private bool _timeFreezeEnabled = false;
     private int _frozenTime = -1;
 
-    public CommandExecutor(IModHelper helper, IMonitor monitor)
+    public CommandExecutor(IMonitor monitor, ModConfig config)
     {
-        _helper = helper;
         _monitor = monitor;
+        _config = config;
+        _actions = new GameActionDriver(monitor);
     }
 
     // Public properties for movement state (used by GameStateSerializer)
@@ -201,18 +203,18 @@ public class CommandExecutor
             return;
         }
 
-        // Set cursor to tile in front so tool swings in correct direction
-        SetCursorToFacingTile();
+        if (!_actions.UseTool(out var useMessage))
+        {
+            _toolCallback?.Invoke(new CommandResponse
+            {
+                Id = _toolCommandId ?? "",
+                Success = false,
+                Message = $"Use tool failed: {useMessage}"
+            });
+            ClearToolState();
+            return;
+        }
 
-        // Force non-mouse mode right before pressing button
-        Game1.lastCursorMotionWasMouse = false;
-
-        // Use the tool
-        var useButton = Game1.options.useToolButton.Length > 0
-            ? Game1.options.useToolButton[0].ToSButton()
-            : SButton.MouseLeft;
-
-        _helper.Input.Press(useButton);
         _toolUseRemaining--;
         _toolUseCooldown = ToolUseCooldownTicks;
 
@@ -256,11 +258,17 @@ public class CommandExecutor
         // Keep pressing the button every tick to simulate holding
         if (!_holdToolReleased)
         {
-            // Set cursor to tile in front so tool aims in correct direction
-            SetCursorToFacingTile();
-
-            // Press every tick to simulate holding
-            _helper.Input.Press(useButton);
+            if (!_actions.PressButton(useButton))
+            {
+                _holdToolCallback?.Invoke(new CommandResponse
+                {
+                    Id = _holdToolCommandId ?? "",
+                    Success = false,
+                    Message = $"{_holdToolName} charge action failed"
+                });
+                ClearHoldToolState();
+                return;
+            }
             _holdToolRemaining--;
 
             // Check if we should stop (release)
@@ -389,20 +397,34 @@ public class CommandExecutor
             return;
         }
 
-        // Calculate direction to next waypoint
-        int dx = (int)(targetTile.X - currentPos.X);
-        int dy = (int)(targetTile.Y - currentPos.Y);
+        MoveTowardTile(targetTile);
+    }
 
-        SButton? moveButton = null;
-        if (dx > 0) moveButton = GetMoveButton("right");
-        else if (dx < 0) moveButton = GetMoveButton("left");
-        else if (dy > 0) moveButton = GetMoveButton("down");
-        else if (dy < 0) moveButton = GetMoveButton("up");
+    private void MoveTowardTile(Vector2 targetTile)
+    {
+        var player = Game1.player;
+        var targetPosition = targetTile * 64f;
+        var delta = targetPosition - player.Position;
 
-        if (moveButton.HasValue)
+        if (Math.Abs(delta.X) > Math.Abs(delta.Y))
         {
-            _helper.Input.Press(moveButton.Value);
+            player.FacingDirection = delta.X > 0 ? 1 : 3;
         }
+        else if (Math.Abs(delta.Y) > 0.01f)
+        {
+            player.FacingDirection = delta.Y > 0 ? 2 : 0;
+        }
+
+        const float speed = 4f;
+        if (delta.Length() <= speed)
+        {
+            player.Position = targetPosition;
+            player.FarmerSprite.StopAnimation();
+            return;
+        }
+
+        delta.Normalize();
+        player.Position += delta * speed;
     }
 
     /// <summary>Recalculate path when stuck or blocked.</summary>
@@ -461,6 +483,17 @@ public class CommandExecutor
 
         try
         {
+            if (command.Action.StartsWith("cheat_", StringComparison.OrdinalIgnoreCase) && !_config.EnableCheats)
+            {
+                command.OnComplete?.Invoke(new CommandResponse
+                {
+                    Id = command.Id,
+                    Success = false,
+                    Message = "Cheat commands are disabled in the StardewMCP mod config. Set EnableCheats=true to allow them."
+                });
+                return;
+            }
+
             var result = command.Action.ToLower() switch
             {
                 // Movement & Basic Actions
@@ -706,7 +739,15 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        if (!_actions.Interact(out var actionMessage))
+        {
+            return new CommandResponse
+            {
+                Id = command.Id,
+                Success = false,
+                Message = $"Interaction failed: {actionMessage}"
+            };
+        }
 
         var player = Game1.player;
         return new CommandResponse
@@ -749,7 +790,15 @@ public class CommandExecutor
             ? Game1.options.useToolButton[0].ToSButton()
             : SButton.MouseLeft;
 
-        _helper.Input.Press(useButton);
+        if (!_actions.UseTool(out var toolMessage))
+        {
+            return new CommandResponse
+            {
+                Id = command.Id,
+                Success = false,
+                Message = $"Use tool failed: {toolMessage}"
+            };
+        }
 
         return new CommandResponse
         {
@@ -881,8 +930,7 @@ public class CommandExecutor
             };
         }
 
-        player.FacingDirection = facingDirection;
-        player.FarmerSprite.StopAnimation();
+        _actions.Face(facingDirection);
 
         return new CommandResponse
         {
@@ -934,7 +982,20 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        if (!_actions.PressButton(actionButton))
+        {
+            return new CommandResponse
+            {
+                Id = command.Id,
+                Success = false,
+                Message = "Place item failed: action button could not be invoked",
+                Data = new Dictionary<string, object>
+                {
+                    ["tileX"] = (int)tileInFront.X,
+                    ["tileY"] = (int)tileInFront.Y
+                }
+            };
+        }
 
         return new CommandResponse
         {
@@ -1050,7 +1111,15 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        if (!_actions.PressButton(actionButton))
+        {
+            return new CommandResponse
+            {
+                Id = command.Id,
+                Success = false,
+                Message = "Eat item failed: action button could not be invoked"
+            };
+        }
 
         return new CommandResponse
         {
@@ -1275,7 +1344,7 @@ public class CommandExecutor
             ? Game1.options.useToolButton[0].ToSButton()
             : SButton.MouseLeft;
 
-        _helper.Input.Press(useButton);
+        _actions.PressButton(useButton);
 
         return new CommandResponse
         {
@@ -1320,7 +1389,7 @@ public class CommandExecutor
             ? Game1.options.useToolButton[0].ToSButton()
             : SButton.MouseLeft;
 
-        _helper.Input.Press(useButton);
+        _actions.PressButton(useButton);
 
         return new CommandResponse
         {
@@ -1364,7 +1433,15 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        if (!_actions.PressButton(actionButton))
+        {
+            return new CommandResponse
+            {
+                Id = command.Id,
+                Success = false,
+                Message = "Open shop menu failed: action button could not be invoked"
+            };
+        }
 
         return new CommandResponse
         {
@@ -1588,7 +1665,15 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        if (!_actions.PressButton(actionButton))
+        {
+            return new CommandResponse
+            {
+                Id = command.Id,
+                Success = false,
+                Message = "Give gift failed: action button could not be invoked"
+            };
+        }
 
         return new CommandResponse
         {
@@ -1807,7 +1892,22 @@ public class CommandExecutor
             }
         }
 
-        _helper.Input.Press(actionButton);
+        if (!_actions.PressButton(actionButton))
+        {
+            return new CommandResponse
+            {
+                Id = command.Id,
+                Success = false,
+                Message = "Enter door failed: action button could not be invoked",
+                Data = new Dictionary<string, object>
+                {
+                    ["tileX"] = (int)tileInFront.X,
+                    ["tileY"] = (int)tileInFront.Y,
+                    ["isWarp"] = isWarp,
+                    ["target"] = targetLocation
+                }
+            };
+        }
 
         return new CommandResponse
         {
@@ -1848,7 +1948,7 @@ public class CommandExecutor
             : SButton.MouseLeft;
 
         SetCursorToFacingTile();
-        _helper.Input.Press(useButton);
+        _actions.PressButton(useButton);
 
         return new CommandResponse
         {
@@ -1957,7 +2057,7 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        _actions.PressButton(actionButton);
 
         return new CommandResponse
         {
@@ -2007,7 +2107,7 @@ public class CommandExecutor
             ? Game1.options.useToolButton[0].ToSButton()
             : SButton.MouseLeft;
 
-        _helper.Input.Press(useButton);
+        _actions.PressButton(useButton);
 
         return new CommandResponse
         {
@@ -2051,7 +2151,7 @@ public class CommandExecutor
             ? Game1.options.useToolButton[0].ToSButton()
             : SButton.MouseLeft;
 
-        _helper.Input.Press(useButton);
+        _actions.PressButton(useButton);
 
         return new CommandResponse
         {
@@ -2068,7 +2168,7 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        _actions.PressButton(actionButton);
 
         return new CommandResponse
         {
@@ -2118,7 +2218,7 @@ public class CommandExecutor
             ? Game1.options.actionButton[0].ToSButton()
             : SButton.MouseRight;
 
-        _helper.Input.Press(actionButton);
+        _actions.PressButton(actionButton);
 
         return new CommandResponse
         {
@@ -3339,8 +3439,8 @@ public class CommandExecutor
             {
                 ["craftingRecipesAdded"] = craftingAdded,
                 ["cookingRecipesAdded"] = cookingAdded,
-                ["totalCraftingRecipes"] = Game1.player.craftingRecipes.Count,
-                ["totalCookingRecipes"] = Game1.player.cookingRecipes.Count
+                ["totalCraftingRecipes"] = Game1.player.craftingRecipes.Count(),
+                ["totalCookingRecipes"] = Game1.player.cookingRecipes.Count()
             }
         };
     }

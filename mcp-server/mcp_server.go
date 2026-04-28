@@ -4,130 +4,130 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sort"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Parameter structs with jsonschema tags for tool definition
+// Parameter structs for MCP tool input schemas.
 type MoveParams struct {
-	X int `json:"x" jsonschema:"description=The X coordinate to move to"`
-	Y int `json:"y" jsonschema:"description=The Y coordinate to move to"`
+	X *int `json:"x"`
+	Y *int `json:"y"`
 }
 
 type DirectionParams struct {
-	Direction string `json:"direction" jsonschema:"description=The direction to face (up, down, left, right),enum=up,enum=down,enum=left,enum=right"`
+	Direction string `json:"direction"`
 }
 
 type NameParams struct {
-	Name string `json:"name" jsonschema:"description=The name of the item to select"`
+	Name string `json:"name"`
 }
 
 type TargetTypeParams struct {
-	TargetType string `json:"targetType" jsonschema:"description=The type of target to find (e.g. tree, rock, npc, weed)"`
+	TargetType string `json:"targetType"`
 }
 
 type CountParams struct {
-	Count int `json:"count" jsonschema:"description=The number of times to repeat the action"`
+	Count int `json:"count"`
 }
 
 type SlotParams struct {
-	Slot int `json:"slot" jsonschema:"description=The inventory slot index to switch to"`
+	Slot int `json:"slot"`
 }
 
 type CheatWarpParams struct {
-	Location string `json:"location" jsonschema:"description=The location to warp to (e.g., Farm, Town, Mountain, Beach)"`
+	Location string `json:"location"`
 }
 
 type CheatSetMoneyParams struct {
-	Amount int `json:"amount" jsonschema:"description=The amount of money to set"`
+	Amount int `json:"amount"`
 }
 
 type CheatAddItemParams struct {
-	ItemId string `json:"itemId" jsonschema:"description=The item ID to add, e.g. '(O)465'"`
-	Amount int    `json:"amount" jsonschema:"description=The amount of the item to add"`
+	ItemId string `json:"itemId"`
+	Amount int    `json:"amount"`
 }
 
 type CheatSetFriendshipParams struct {
-	NPCName string `json:"npcName" jsonschema:"description=The name of the NPC"`
-	Amount  int    `json:"amount" jsonschema:"description=The amount of friendship points or hearts (if <= 14)"`
+	NPCName string `json:"npcName"`
+	Amount  int    `json:"amount"`
 }
 
 type CheatMineWarpParams struct {
-	Level int `json:"level" jsonschema:"description=The mine level to warp to (1-120 Mines, 121+ Skull Cavern)"`
+	Level int `json:"level"`
 }
 
 type CheatSpawnOresParams struct {
-	Amount int `json:"amount" jsonschema:"description=The amount of ores to spawn"`
+	Amount int `json:"amount"`
 }
 
 type CheatTimeSetParams struct {
-	Time int `json:"time" jsonschema:"description=The time to set (600=6AM, 1200=noon, 2400=midnight)"`
+	Time int `json:"time"`
 }
 
 type CheatCompleteQuestParams struct {
-	QuestId string `json:"questId" jsonschema:"description=The quest ID to complete, or 'all' for all active quests"`
+	QuestId string `json:"questId"`
 }
 
 type CheatGiveGiftParams struct {
-	NPCName  string `json:"npcName" jsonschema:"description=The name of the NPC to give the gift to"`
-	ItemName string `json:"itemName" jsonschema:"description=The name of the item to give"`
+	NPCName  string `json:"npcName"`
+	ItemName string `json:"itemName"`
 }
 
 type CheatHoeAllParams struct {
-	Radius int `json:"radius" jsonschema:"description=The radius around the player to hoe (0 means entire location)"`
+	Radius int `json:"radius,omitempty"`
 }
 
 type CheatCutTreesParams struct {
-	Radius int `json:"radius" jsonschema:"description=The radius around the player to cut trees (0 means entire location)"`
+	Radius int `json:"radius,omitempty"`
 }
 
 type CheatPlantSeedsParams struct {
-	SeedId string `json:"seedId" jsonschema:"description=The ID of the seed to plant, e.g. '472' for parsnips"`
-	Radius int    `json:"radius" jsonschema:"description=The radius around the player to plant (0 means entire location)"`
+	SeedId string `json:"seedId"`
+	Radius int    `json:"radius,omitempty"`
 }
 
 type CheatFertilizeAllParams struct {
-	FertilizerId string `json:"fertilizerId" jsonschema:"description=The ID of the fertilizer to apply"`
-	Radius       int    `json:"radius" jsonschema:"description=The radius around the player to fertilize (0 means entire location)"`
+	FertilizerId string `json:"fertilizerId,omitempty"`
+	Radius       int    `json:"radius,omitempty"`
 }
 
 type CheatUpgradeBackpackParams struct {
-	Size int `json:"size" jsonschema:"description=The size of the backpack (12, 24, or 36)"`
+	Size int `json:"size"`
 }
 
 type CheatUpgradeToolParams struct {
-	ToolName string `json:"toolName" jsonschema:"description=The name of the tool to upgrade (Hoe, Pickaxe, Axe, WateringCan, FishingRod, Trash Can)"`
-	Level    int    `json:"level" jsonschema:"description=The level to upgrade to (0=Basic, 1=Copper, 2=Steel, 3=Gold, 4=Iridium)"`
+	ToolName string `json:"toolName"`
+	Level    int    `json:"level"`
 }
 
 type CheatUpgradeAllToolsParams struct {
-	Level int `json:"level" jsonschema:"description=The level to upgrade all tools to (0=Basic, 1=Copper, 2=Steel, 3=Gold, 4=Iridium)"`
+	Level int `json:"level"`
 }
 
 type CheatHoeTilesParams struct {
-	Tiles string `json:"tiles" jsonschema:"description=The tiles to hoe, format 'x,y;x,y'"`
-	X     int    `json:"x,omitempty" jsonschema:"description=The x coordinate for a single tile"`
-	Y     int    `json:"y,omitempty" jsonschema:"description=The y coordinate for a single tile"`
+	Tiles string `json:"tiles"`
+	X     int    `json:"x,omitempty"`
+	Y     int    `json:"y,omitempty"`
 }
 
 type CheatClearTilesParams struct {
-	Tiles         string `json:"tiles" jsonschema:"description=The tiles to clear, format 'x,y;x,y'"`
-	X             int    `json:"x,omitempty" jsonschema:"description=The x coordinate for a single tile"`
-	Y             int    `json:"y,omitempty" jsonschema:"description=The y coordinate for a single tile"`
-	ClearObjects  bool   `json:"clearObjects,omitempty" jsonschema:"description=Whether to clear objects (default true)"`
-	ClearFeatures bool   `json:"clearFeatures,omitempty" jsonschema:"description=Whether to clear terrain features (default true)"`
-	ClearDirt     bool   `json:"clearDirt,omitempty" jsonschema:"description=Whether to clear hoed dirt (default true)"`
+	Tiles         string `json:"tiles"`
+	X             int    `json:"x,omitempty"`
+	Y             int    `json:"y,omitempty"`
+	ClearObjects  bool   `json:"clearObjects,omitempty"`
+	ClearFeatures bool   `json:"clearFeatures,omitempty"`
+	ClearDirt     bool   `json:"clearDirt,omitempty"`
 }
 
 type CheatHoeCustomPatternParams struct {
-	Grid string `json:"grid" jsonschema:"description=The ASCII grid representing the pattern to hoe (# for hoe, . for empty)"`
-	X    int    `json:"x,omitempty" jsonschema:"description=The center X coordinate (default player's X)"`
-	Y    int    `json:"y,omitempty" jsonschema:"description=The center Y coordinate (default player's Y)"`
+	Grid string `json:"grid"`
+	X    int    `json:"x,omitempty"`
+	Y    int    `json:"y,omitempty"`
 }
 
-func runMCPServer(client *GameClient) error {
+func runMCPServer(client *GameClient, enableCheats bool) error {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "stardew-mcp",
 		Version: "1.0.0",
@@ -140,14 +140,14 @@ func runMCPServer(client *GameClient) error {
 
 	// Register Prompts
 	server.AddPrompt(&mcp.Prompt{
-		Name: "game_knowledge",
+		Name:        "game_knowledge",
 		Description: "Stardew Valley knowledge and instructions",
 	}, func(ctx context.Context, request *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 		return &mcp.GetPromptResult{
 			Description: "Stardew Valley AI Agent Knowledge Base",
 			Messages: []*mcp.PromptMessage{
 				{
-					Role: "user",
+					Role:    "user",
 					Content: &mcp.TextContent{Text: gameKnowledge},
 				},
 			},
@@ -172,21 +172,30 @@ func runMCPServer(client *GameClient) error {
 
 		dataBytes, _ := json.MarshalIndent(resp.Data, "", "  ")
 		return &mcp.CallToolResult{
-					Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Success: %s\n%s", resp.Message, string(dataBytes))}},
-			}, nil, nil
+			Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Success: %s\n%s", resp.Message, string(dataBytes))}},
+		}, nil, nil
 	}
 
 	// Register Tools
+	toolError := func(message string) (*mcp.CallToolResult, interface{}, error) {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: message}},
+			IsError: true,
+		}, nil, nil
+	}
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "move_to",
+		Name:        "move_to",
 		Description: "Navigate to specific coordinates using A* pathfinding. Pathfinding might fail if the target is unreachable.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params MoveParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("move_to", map[string]interface{}{"x": params.X, "y": params.Y})
+		if params.X == nil || params.Y == nil {
+			return toolError("move_to requires integer parameters x and y.")
+		}
+		return executeCommand("move_to", map[string]interface{}{"x": *params.X, "y": *params.Y})
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "get_surroundings",
+		Name:        "get_surroundings",
 		Description: "Refresh vision to see 61x61 area coordinates and the current game state.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
 		state := client.GetState()
@@ -197,70 +206,90 @@ func runMCPServer(client *GameClient) error {
 			}, nil, nil
 		}
 		return &mcp.CallToolResult{
-					Content: []mcp.Content{&mcp.TextContent{Text: formatGameStateContext(state)}},
-			}, nil, nil
+			Content: []mcp.Content{&mcp.TextContent{Text: formatGameStateContext(state)}},
+		}, nil, nil
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "interact",
+		Name:        "interact",
 		Description: "Interact with the tile directly in front of the player.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
 		return executeCommand("interact", nil)
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "use_tool",
+		Name:        "use_tool",
 		Description: "Use the currently equipped tool once.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
 		return executeCommand("use_tool", nil)
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "use_tool_repeat",
+		Name:        "use_tool_repeat",
 		Description: "Execute the currently equipped tool multiple times in succession.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params CountParams) (*mcp.CallToolResult, interface{}, error) {
+		if params.Count < 1 {
+			return toolError("use_tool_repeat requires count >= 1.")
+		}
 		return executeCommand("use_tool_repeat", map[string]interface{}{"count": params.Count})
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "face_direction",
+		Name:        "face_direction",
 		Description: "Turn character to face direction (up, down, left, right).",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params DirectionParams) (*mcp.CallToolResult, interface{}, error) {
+		switch strings.ToLower(params.Direction) {
+		case "up", "down", "left", "right":
+		default:
+			return toolError("face_direction requires direction to be one of: up, down, left, right.")
+		}
 		return executeCommand("face_direction", map[string]interface{}{"direction": params.Direction})
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "select_item",
+		Name:        "select_item",
 		Description: "Find and equip an item from inventory by name.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params NameParams) (*mcp.CallToolResult, interface{}, error) {
+		if strings.TrimSpace(params.Name) == "" {
+			return toolError("select_item requires a non-empty name.")
+		}
 		return executeCommand("select_item", map[string]interface{}{"name": params.Name})
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "switch_tool",
+		Name:        "switch_tool",
 		Description: "Equip an item from a specific inventory slot index.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params SlotParams) (*mcp.CallToolResult, interface{}, error) {
+		if params.Slot < 0 {
+			return toolError("switch_tool requires slot >= 0.")
+		}
 		return executeCommand("switch_tool", map[string]interface{}{"slot": params.Slot})
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "eat_item",
+		Name:        "eat_item",
 		Description: "Eat food from an inventory slot to restore energy/health.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params SlotParams) (*mcp.CallToolResult, interface{}, error) {
+		if params.Slot < 0 {
+			return toolError("eat_item requires slot >= 0.")
+		}
 		return executeCommand("eat_item", map[string]interface{}{"slot": params.Slot})
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "enter_door",
+		Name:        "enter_door",
 		Description: "Enter a door or warp point in front of the player.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
 		return executeCommand("enter_door", nil)
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "find_best_target",
+		Name:        "find_best_target",
 		Description: "Find the nearest target of a specified type with a walkable approach tile.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params TargetTypeParams) (*mcp.CallToolResult, interface{}, error) {
+		if strings.TrimSpace(params.TargetType) == "" {
+			return toolError("find_best_target requires a non-empty targetType.")
+		}
 		state := client.GetState()
 		if state == nil {
 			return &mcp.CallToolResult{
@@ -270,315 +299,373 @@ func runMCPServer(client *GameClient) error {
 		}
 		result := findBestTarget(state, params.TargetType)
 		return &mcp.CallToolResult{
-					Content: []mcp.Content{&mcp.TextContent{Text: result}},
-			}, nil, nil
+			Content: []mcp.Content{&mcp.TextContent{Text: result}},
+		}, nil, nil
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "clear_target",
+		Name:        "clear_target",
 		Description: "Find and clear the nearest target automatically.",
 	}, func(ctx context.Context, request *mcp.CallToolRequest, params TargetTypeParams) (*mcp.CallToolResult, interface{}, error) {
+		if strings.TrimSpace(params.TargetType) == "" {
+			return toolError("clear_target requires a non-empty targetType.")
+		}
 		return executeCommand("clear_target", map[string]interface{}{"targetType": params.TargetType})
 	})
 
 	// --- Cheat Tools ---
+	if enableCheats {
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_mode_enable",
-		Description: "Enable cheat mode. Required before using other cheat commands.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_mode_enable", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_mode_enable",
+			Description: "Enable cheat mode. Required before using other cheat commands.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_mode_enable", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_mode_disable",
-		Description: "Disable cheat mode and persistent effects.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_mode_disable", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_mode_disable",
+			Description: "Disable cheat mode and persistent effects.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_mode_disable", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_warp",
-		Description: "Instantly teleport to any location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatWarpParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_warp", map[string]interface{}{"location": params.Location})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_warp",
+			Description: "Instantly teleport to any location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatWarpParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.Location) == "" {
+				return toolError("cheat_warp requires a non-empty location.")
+			}
+			return executeCommand("cheat_warp", map[string]interface{}{"location": params.Location})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_set_money",
-		Description: "Set player's gold amount.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatSetMoneyParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_set_money", map[string]interface{}{"amount": params.Amount})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_set_money",
+			Description: "Set player's gold amount.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatSetMoneyParams) (*mcp.CallToolResult, interface{}, error) {
+			if params.Amount < 0 {
+				return toolError("cheat_set_money requires amount >= 0.")
+			}
+			return executeCommand("cheat_set_money", map[string]interface{}{"amount": params.Amount})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_add_item",
-		Description: "Add any item to inventory by ID.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatAddItemParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_add_item", map[string]interface{}{"itemId": params.ItemId, "amount": params.Amount})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_add_item",
+			Description: "Add any item to inventory by ID.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatAddItemParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.ItemId) == "" || params.Amount < 1 {
+				return toolError("cheat_add_item requires non-empty itemId and amount >= 1.")
+			}
+			return executeCommand("cheat_add_item", map[string]interface{}{"itemId": params.ItemId, "amount": params.Amount})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_set_energy",
-		Description: "Restore stamina to max.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_set_energy", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_set_energy",
+			Description: "Restore stamina to max.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_set_energy", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_set_health",
-		Description: "Restore health to max.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_set_health", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_set_health",
+			Description: "Restore health to max.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_set_health", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_set_friendship",
-		Description: "Instantly set friendship with any NPC.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatSetFriendshipParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_set_friendship", map[string]interface{}{"npcName": params.NPCName, "amount": params.Amount})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_set_friendship",
+			Description: "Instantly set friendship with any NPC.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatSetFriendshipParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.NPCName) == "" || params.Amount < 0 {
+				return toolError("cheat_set_friendship requires non-empty npcName and amount >= 0.")
+			}
+			return executeCommand("cheat_set_friendship", map[string]interface{}{"npcName": params.NPCName, "amount": params.Amount})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_max_all_friendships",
-		Description: "Max out friendship with ALL NPCs at once.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_max_all_friendships", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_max_all_friendships",
+			Description: "Max out friendship with ALL NPCs at once.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_max_all_friendships", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_harvest_all",
-		Description: "Instantly harvest all ready crops in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_harvest_all", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_harvest_all",
+			Description: "Instantly harvest all ready crops in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_harvest_all", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_water_all",
-		Description: "Instantly water all soil in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_water_all", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_water_all",
+			Description: "Instantly water all soil in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_water_all", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_grow_crops",
-		Description: "Instantly grow all crops to harvest-ready.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_grow_crops", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_grow_crops",
+			Description: "Instantly grow all crops to harvest-ready.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_grow_crops", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_clear_debris",
-		Description: "Remove all weeds, stones, twigs, grass in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_clear_debris", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_clear_debris",
+			Description: "Remove all weeds, stones, twigs, grass in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_clear_debris", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_mine_warp",
-		Description: "Warp directly to specific mine level.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatMineWarpParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_mine_warp", map[string]interface{}{"level": params.Level})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_mine_warp",
+			Description: "Warp directly to specific mine level.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatMineWarpParams) (*mcp.CallToolResult, interface{}, error) {
+			if params.Level < 1 {
+				return toolError("cheat_mine_warp requires level >= 1.")
+			}
+			return executeCommand("cheat_mine_warp", map[string]interface{}{"level": params.Level})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_spawn_ores",
-		Description: "Add ores directly to inventory.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatSpawnOresParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_spawn_ores", map[string]interface{}{"amount": params.Amount})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_spawn_ores",
+			Description: "Add ores directly to inventory.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatSpawnOresParams) (*mcp.CallToolResult, interface{}, error) {
+			if params.Amount < 1 {
+				return toolError("cheat_spawn_ores requires amount >= 1.")
+			}
+			return executeCommand("cheat_spawn_ores", map[string]interface{}{"amount": params.Amount})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_collect_all_forage",
-		Description: "Instantly collect all forage items in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_collect_all_forage", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_collect_all_forage",
+			Description: "Instantly collect all forage items in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_collect_all_forage", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_instant_mine",
-		Description: "Mine ALL ore nodes in current mine level instantly.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_instant_mine", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_instant_mine",
+			Description: "Mine ALL ore nodes in current mine level instantly.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_instant_mine", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_time_set",
-		Description: "Set the game time.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatTimeSetParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_time_set", map[string]interface{}{"time": params.Time})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_time_set",
+			Description: "Set the game time.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatTimeSetParams) (*mcp.CallToolResult, interface{}, error) {
+			if params.Time < 600 || params.Time > 2600 {
+				return toolError("cheat_time_set requires time between 600 and 2600.")
+			}
+			return executeCommand("cheat_time_set", map[string]interface{}{"time": params.Time})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_time_freeze",
-		Description: "Toggle time freeze on/off.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_time_freeze", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_time_freeze",
+			Description: "Toggle time freeze on/off.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_time_freeze", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_infinite_energy",
-		Description: "Toggle infinite stamina on/off.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_infinite_energy", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_infinite_energy",
+			Description: "Toggle infinite stamina on/off.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_infinite_energy", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_unlock_recipes",
-		Description: "Unlock ALL crafting and cooking recipes.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_unlock_recipes", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_unlock_recipes",
+			Description: "Unlock ALL crafting and cooking recipes.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_unlock_recipes", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_pet_all_animals",
-		Description: "Pet ALL farm animals instantly.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_pet_all_animals", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_pet_all_animals",
+			Description: "Pet ALL farm animals instantly.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_pet_all_animals", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_complete_quest",
-		Description: "Complete active quests instantly.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatCompleteQuestParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_complete_quest", map[string]interface{}{"questId": params.QuestId})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_complete_quest",
+			Description: "Complete active quests instantly.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatCompleteQuestParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.QuestId) == "" {
+				return toolError("cheat_complete_quest requires a non-empty questId.")
+			}
+			return executeCommand("cheat_complete_quest", map[string]interface{}{"questId": params.QuestId})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_give_gift",
-		Description: "Give a gift to an NPC instantly.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatGiveGiftParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_give_gift", map[string]interface{}{"npcName": params.NPCName, "itemName": params.ItemName})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_give_gift",
+			Description: "Give a gift to an NPC instantly.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatGiveGiftParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.NPCName) == "" || strings.TrimSpace(params.ItemName) == "" {
+				return toolError("cheat_give_gift requires non-empty npcName and itemName.")
+			}
+			return executeCommand("cheat_give_gift", map[string]interface{}{"npcName": params.NPCName, "itemName": params.ItemName})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_hoe_all",
-		Description: "Instantly hoe/till all diggable tiles in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatHoeAllParams) (*mcp.CallToolResult, interface{}, error) {
-		p := map[string]interface{}{}
-		if params.Radius > 0 { p["radius"] = params.Radius }
-		return executeCommand("cheat_hoe_all", p)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_hoe_all",
+			Description: "Instantly hoe/till all diggable tiles in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatHoeAllParams) (*mcp.CallToolResult, interface{}, error) {
+			p := map[string]interface{}{}
+			if params.Radius > 0 {
+				p["radius"] = params.Radius
+			}
+			return executeCommand("cheat_hoe_all", p)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_cut_trees",
-		Description: "Instantly cut/chop ALL trees in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatCutTreesParams) (*mcp.CallToolResult, interface{}, error) {
-		p := map[string]interface{}{}
-		if params.Radius > 0 { p["radius"] = params.Radius }
-		return executeCommand("cheat_cut_trees", p)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_cut_trees",
+			Description: "Instantly cut/chop ALL trees in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatCutTreesParams) (*mcp.CallToolResult, interface{}, error) {
+			p := map[string]interface{}{}
+			if params.Radius > 0 {
+				p["radius"] = params.Radius
+			}
+			return executeCommand("cheat_cut_trees", p)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_mine_rocks",
-		Description: "Instantly mine ALL rocks/stones/boulders in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_mine_rocks", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_mine_rocks",
+			Description: "Instantly mine ALL rocks/stones/boulders in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_mine_rocks", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_dig_artifacts",
-		Description: "Instantly dig up ALL artifact spots in current location.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_dig_artifacts", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_dig_artifacts",
+			Description: "Instantly dig up ALL artifact spots in current location.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_dig_artifacts", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_plant_seeds",
-		Description: "Instantly plant seeds on ALL empty hoed tiles.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatPlantSeedsParams) (*mcp.CallToolResult, interface{}, error) {
-		p := map[string]interface{}{"seedId": params.SeedId}
-		if params.Radius > 0 { p["radius"] = params.Radius }
-		return executeCommand("cheat_plant_seeds", p)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_plant_seeds",
+			Description: "Instantly plant seeds on ALL empty hoed tiles.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatPlantSeedsParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.SeedId) == "" {
+				return toolError("cheat_plant_seeds requires a non-empty seedId.")
+			}
+			p := map[string]interface{}{"seedId": params.SeedId}
+			if params.Radius > 0 {
+				p["radius"] = params.Radius
+			}
+			return executeCommand("cheat_plant_seeds", p)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_fertilize_all",
-		Description: "Apply fertilizer to ALL hoed tiles.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatFertilizeAllParams) (*mcp.CallToolResult, interface{}, error) {
-		p := map[string]interface{}{}
-		if params.FertilizerId != "" { p["fertilizerId"] = params.FertilizerId }
-		if params.Radius > 0 { p["radius"] = params.Radius }
-		return executeCommand("cheat_fertilize_all", p)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_fertilize_all",
+			Description: "Apply fertilizer to ALL hoed tiles.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatFertilizeAllParams) (*mcp.CallToolResult, interface{}, error) {
+			p := map[string]interface{}{}
+			if params.FertilizerId != "" {
+				p["fertilizerId"] = params.FertilizerId
+			}
+			if params.Radius > 0 {
+				p["radius"] = params.Radius
+			}
+			return executeCommand("cheat_fertilize_all", p)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_upgrade_backpack",
-		Description: "Upgrade backpack to larger size.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatUpgradeBackpackParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_upgrade_backpack", map[string]interface{}{"size": params.Size})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_upgrade_backpack",
+			Description: "Upgrade backpack to larger size.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatUpgradeBackpackParams) (*mcp.CallToolResult, interface{}, error) {
+			if params.Size != 12 && params.Size != 24 && params.Size != 36 {
+				return toolError("cheat_upgrade_backpack requires size to be 12, 24, or 36.")
+			}
+			return executeCommand("cheat_upgrade_backpack", map[string]interface{}{"size": params.Size})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_upgrade_tool",
-		Description: "Upgrade a specific tool to higher level.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatUpgradeToolParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_upgrade_tool", map[string]interface{}{"toolName": params.ToolName, "level": params.Level})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_upgrade_tool",
+			Description: "Upgrade a specific tool to higher level.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatUpgradeToolParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.ToolName) == "" || params.Level < 0 || params.Level > 4 {
+				return toolError("cheat_upgrade_tool requires non-empty toolName and level between 0 and 4.")
+			}
+			return executeCommand("cheat_upgrade_tool", map[string]interface{}{"toolName": params.ToolName, "level": params.Level})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_upgrade_all_tools",
-		Description: "Upgrade ALL tools to specified level.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatUpgradeAllToolsParams) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_upgrade_all_tools", map[string]interface{}{"level": params.Level})
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_upgrade_all_tools",
+			Description: "Upgrade ALL tools to specified level.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatUpgradeAllToolsParams) (*mcp.CallToolResult, interface{}, error) {
+			if params.Level < 0 || params.Level > 4 {
+				return toolError("cheat_upgrade_all_tools requires level between 0 and 4.")
+			}
+			return executeCommand("cheat_upgrade_all_tools", map[string]interface{}{"level": params.Level})
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_unlock_all",
-		Description: "UNLOCK EVERYTHING: Max backpack, tools, recipes, skills, etc.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
-		return executeCommand("cheat_unlock_all", nil)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_unlock_all",
+			Description: "UNLOCK EVERYTHING: Max backpack, tools, recipes, skills, etc.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params struct{}) (*mcp.CallToolResult, interface{}, error) {
+			return executeCommand("cheat_unlock_all", nil)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_hoe_tiles",
-		Description: "Hoe SPECIFIC tiles by coordinates.",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatHoeTilesParams) (*mcp.CallToolResult, interface{}, error) {
-		p := map[string]interface{}{}
-		if params.Tiles != "" { p["tiles"] = params.Tiles }
-		if params.X != 0 || params.Y != 0 {
-			p["x"] = params.X
-			p["y"] = params.Y
-		}
-		return executeCommand("cheat_hoe_tiles", p)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_hoe_tiles",
+			Description: "Hoe SPECIFIC tiles by coordinates.",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatHoeTilesParams) (*mcp.CallToolResult, interface{}, error) {
+			p := map[string]interface{}{}
+			if params.Tiles != "" {
+				p["tiles"] = params.Tiles
+			}
+			if params.X != 0 || params.Y != 0 {
+				p["x"] = params.X
+				p["y"] = params.Y
+			}
+			return executeCommand("cheat_hoe_tiles", p)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_clear_tiles",
-		Description: "Clear SPECIFIC tiles (objects, terrain, hoed dirt).",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatClearTilesParams) (*mcp.CallToolResult, interface{}, error) {
-		p := map[string]interface{}{}
-		if params.Tiles != "" { p["tiles"] = params.Tiles }
-		if params.X != 0 || params.Y != 0 {
-			p["x"] = params.X
-			p["y"] = params.Y
-		}
-		p["clearObjects"] = params.ClearObjects
-		p["clearFeatures"] = params.ClearFeatures
-		p["clearDirt"] = params.ClearDirt
-		return executeCommand("cheat_clear_tiles", p)
-	})
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_clear_tiles",
+			Description: "Clear SPECIFIC tiles (objects, terrain, hoed dirt).",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatClearTilesParams) (*mcp.CallToolResult, interface{}, error) {
+			p := map[string]interface{}{}
+			if params.Tiles != "" {
+				p["tiles"] = params.Tiles
+			}
+			if params.X != 0 || params.Y != 0 {
+				p["x"] = params.X
+				p["y"] = params.Y
+			}
+			p["clearObjects"] = params.ClearObjects
+			p["clearFeatures"] = params.ClearFeatures
+			p["clearDirt"] = params.ClearDirt
+			return executeCommand("cheat_clear_tiles", p)
+		})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "cheat_hoe_custom_pattern",
-		Description: "Draw ANY shape by designing it yourself as an ASCII grid!",
-	}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatHoeCustomPatternParams) (*mcp.CallToolResult, interface{}, error) {
-		p := map[string]interface{}{"grid": params.Grid}
-		if params.X != 0 || params.Y != 0 {
-			p["x"] = params.X
-			p["y"] = params.Y
-		}
-		return executeCommand("cheat_hoe_custom_pattern", p)
-	})
-
+		mcp.AddTool(server, &mcp.Tool{
+			Name:        "cheat_hoe_custom_pattern",
+			Description: "Draw ANY shape by designing it yourself as an ASCII grid!",
+		}, func(ctx context.Context, request *mcp.CallToolRequest, params CheatHoeCustomPatternParams) (*mcp.CallToolResult, interface{}, error) {
+			if strings.TrimSpace(params.Grid) == "" {
+				return toolError("cheat_hoe_custom_pattern requires a non-empty grid.")
+			}
+			p := map[string]interface{}{"grid": params.Grid}
+			if params.X != 0 || params.Y != 0 {
+				p["x"] = params.X
+				p["y"] = params.Y
+			}
+			return executeCommand("cheat_hoe_custom_pattern", p)
+		})
+	}
 
 	// Setup standard input/output transport for MCP
 	transport := &mcp.StdioTransport{}
 
 	ctx := context.Background()
 	err := server.Run(ctx, transport)
-
-
 
 	return err
 }
